@@ -1,15 +1,53 @@
 import streamlit as st
 import pandas as pd
 
-# 1. 페이지 설정 및 디자인 최적화
+# 1. 페이지 설정 및 다크 테마 디자인 최적화
 st.set_page_config(page_title="충북 맞춤 직업 가이드", layout="wide")
 
-# 레이아웃 가독성을 위한 커스텀 CSS
+# 가독성을 위한 고대비 다크 모드 CSS 적용
 st.markdown("""
     <style>
-    .reportview-container { background: #f0f2f6; }
-    .job-card { background-color: #ffffff; padding: 20px; border-radius: 12px; border-left: 5px solid #1E3A8A; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; }
-    .stat-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: #333; }
+    /* 전체 배경색 설정 */
+    .stApp {
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+    /* 사이드바 스타일링 */
+    section[data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+        border-right: 1px solid #334155;
+    }
+    /* 카드 스타일링 (고대비) */
+    .job-card {
+        background-color: #1e293b;
+        padding: 18px;
+        border-radius: 12px;
+        border-left: 6px solid #38bdf8;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    .stat-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+        color: #38bdf8;
+        border-bottom: 2px solid #334155;
+        padding-bottom: 10px;
+    }
+    /* 입력창 및 검색바 스타일 */
+    .stTextInput input {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important;
+    }
+    /* 익스팬더(상세정보) 스타일 */
+    .stDetailed {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+    }
+    h1, h2, h3 {
+        color: #f1f5f9 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -23,38 +61,37 @@ def load_data():
 try:
     job_desc, cb_stats, seekers = load_data()
 
-    # --- [ 사이드바: 고정 정보 ] ---
+    # --- [ 사이드바 ] ---
     with st.sidebar:
-        st.header("📍 충북 데이터 센터")
-        st.info("실시간 공공데이터를 기반으로 충청북도 지역 특화 정보를 제공합니다.")
+        st.markdown("<h2 style='color:#38bdf8;'>📍 충북 데이터 센터</h2>", unsafe_allow_html=True)
+        st.write("실시간 공공데이터를 기반으로 분석한 충청북도 지역 특화 정보입니다.")
         st.divider()
-        st.caption("데이터 출처: 한국고용정보원, 한국장애인고용공단, 통계청")
+        st.caption("© 2026 충북 직업 가이드 서비스")
 
     # --- [ 메인 화면 ] ---
-    st.title("🏔️ 충청북도 맞춤형 직업 정보 가이드")
-    st.markdown("#### 충북 지역의 **일반 채용 현황**과 **장애인 구직자 선호도**를 비교해 드립니다.")
+    st.markdown("<h1 style='text-align: center;'>🏔️ 충청북도 직업 매칭 대시보드</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color:#94a3b8;'>채용 현황과 구직자 선호를 비교하여 최적의 직업군을 제안합니다.</p>", unsafe_allow_html=True)
     st.write("")
 
-    # --- [ 핵심 통계: 두 영역 구분 표시 ] ---
-    col1, col2 = st.columns(2)
+    # --- [ 핵심 통계 영역 ] ---
+    col1, col2 = st.columns(2, gap="large")
 
     with col1:
-        st.markdown("<div class='stat-title'>🏢 충북 상위 채용(취업) 직종</div>", unsafe_allow_html=True)
-        # '계' 항목 제외하고 취업자 수 상위 5개 추출
+        st.markdown("<div class='stat-title'>🏢 충북 시장 채용 현황 (Top 5)</div>", unsafe_allow_html=True)
         top_hiring = cb_stats.sort_values(by=cb_stats.columns[-1], ascending=False)
         filtered_hiring = top_hiring[~top_hiring.iloc[:, 1].str.contains('계|충청북도', na=False)].head(5)
         
         for i in range(len(filtered_hiring)):
-            with st.container():
-                st.markdown(f"""
-                <div class='job-card'>
-                    <small style='color: #1E3A8A;'>채용 순위 {i+1}위</small><br>
-                    <strong style='font-size: 1.2rem;'>{filtered_hiring.iloc[i, 1]}</strong>
-                </div>
-                """, unsafe_allow_html=True)
+            job_name = filtered_hiring.iloc[i, 1]
+            st.markdown(f"""
+            <div class='job-card' style='border-left-color: #38bdf8;'>
+                <span style='color: #7dd3fc; font-size: 0.85rem; font-weight:bold;'>MARKET RANK {i+1}</span><br>
+                <span style='font-size: 1.15rem; font-weight: 700;'>{job_name}</span>
+            </div>
+            """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown("<div class='stat-title'>♿ 장애인 구직자 선호 직종 (충북)</div>", unsafe_allow_html=True)
+        st.markdown("<div class='stat-title'>♿ 장애인 구직자 선호 직종 (Top 5)</div>", unsafe_allow_html=True)
         try:
             loc_idx = next((i for i, c in enumerate(seekers.columns) if '지역' in c), 0)
             job_idx = next((i for i, c in enumerate(seekers.columns) if '직종' in c), 1)
@@ -63,41 +100,37 @@ try:
             if not cb_seekers.empty:
                 pref_jobs = cb_seekers.iloc[:, job_idx].value_counts().head(5)
                 for idx, (job, count) in enumerate(pref_jobs.items()):
-                    with st.container():
-                        st.markdown(f"""
-                        <div class='job-card' style='border-left-color: #10B981;'>
-                            <small style='color: #10B981;'>선호 순위 {idx+1}위</small><br>
-                            <strong style='font-size: 1.2rem;'>{job}</strong> <span style='font-size: 0.9rem; color: #666;'>({count}명 희망)</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-            else:
-                st.write("해당 지역의 데이터가 부족합니다.")
+                    st.markdown(f"""
+                    <div class='job-card' style='border-left-color: #fbbf24;'>
+                        <span style='color: #fcd34d; font-size: 0.85rem; font-weight:bold;'>PREFERENCE RANK {idx+1}</span><br>
+                        <span style='font-size: 1.15rem; font-weight: 700;'>{job}</span>
+                        <span style='color: #94a3b8; font-size: 0.9rem; margin-left:10px;'>{count}명 대기 중</span>
+                    </div>
+                    """, unsafe_allow_html=True)
         except:
-            st.error("장애인 구직자 데이터를 불러오는 중 오류가 발생했습니다.")
+            st.error("구직자 데이터를 로드할 수 없습니다.")
 
-    st.markdown("---")
+    st.write("")
+    st.markdown("<div style='background-color:#334155; height:2px; margin: 40px 0;'></div>", unsafe_allow_html=True)
 
-    # --- [ 하단 상세 검색 섹션 ] ---
-    st.markdown("### 🔍 상세 직무 가이드 검색")
-    st.write("위에서 확인한 직종이 실제로 어떤 일을 하는지, 어떤 자격증이 필요한지 검색해 보세요.")
-    
-    query = st.text_input("", placeholder="예: 사무원, 미화원, 조리사 등 입력...")
+    # --- [ 상세 검색 섹션 ] ---
+    st.markdown("### 🔍 직무 상세 정보 검색")
+    query = st.text_input("", placeholder="궁금한 직종명을 입력하세요 (예: 사무원, 조리사, 청소원...)")
 
     if query:
         result = job_desc[job_desc['직종'].str.contains(query, na=False)]
         if not result.empty:
-            st.write(f"**'{query}'**에 대한 {len(result)}건의 직무 상세 정보입니다.")
             for i in range(len(result)):
-                with st.expander(f"📖 {result.iloc[i]['직종']} 상세 분석"):
-                    c_left, c_right = st.columns([3, 2])
-                    with c_left:
-                        st.markdown("**[ 핵심 직무 기술 ]**")
+                with st.expander(f"📄 {result.iloc[i]['직종']} 분석 결과"):
+                    res_col1, res_col2 = st.columns([3, 2])
+                    with res_col1:
+                        st.markdown("<p style='color:#38bdf8; font-weight:bold;'>[ 주요 수행 직무 ]</p>", unsafe_allow_html=True)
                         st.write(result.iloc[i]['표준직무능력내용'])
-                    with c_right:
-                        st.markdown("**[ 추천 자격증 ]**")
-                        st.success(result.iloc[i]['표준직무자격증내용'])
+                    with res_col2:
+                        st.markdown("<p style='color:#fbbf24; font-weight:bold;'>[ 권장 자격증 ]</p>", unsafe_allow_html=True)
+                        st.info(result.iloc[i]['표준직무자격증내용'])
         else:
-            st.warning("상세 직무 기술서에 등록되지 않은 직종입니다. 다른 키워드로 검색해 보세요.")
+            st.warning("입력하신 직종에 대한 상세 가이드가 없습니다.")
 
 except Exception as e:
-    st.error(f"시스템 오류: {e}")
+    st.error(f"시스템 초기화 오류: {e}")
