@@ -1,40 +1,55 @@
 import streamlit as st
 import pandas as pd
 
-# 웹 페이지 설정 (브라우저 탭 이름과 아이콘)
-st.set_page_config(page_title="직업 추천 챗봇", page_icon="🤖")
+st.set_page_config(page_title="충북 맞춤형 직업 추천", layout="wide")
 
-# 데이터 불러오기 함수 (캐싱을 통해 속도 향상)
+# 데이터 로드 함수
 @st.cache_data
 def load_data():
-    return pd.read_csv('한국고용정보원_구인표준직무기술서_20250901.csv', encoding='cp949')
+    # 1. 기본 직무 기술서
+    job_desc = pd.read_csv('한국고용정보원_구인표준직무기술서_20250901.csv', encoding='cp949')
+    # 2. 충북 취업자 통계
+    cb_stats = pd.read_csv('행정구역_시도__직업별_취업자_충북.csv', encoding='cp949')
+    # 3. 구직자 현황 (장애인 고용공단)
+    seekers = pd.read_csv('한국장애인고용공단_장애인 구직자 현황_20251231.CSV', encoding='cp949')
+    return job_desc, cb_stats, seekers
 
-df = load_data()
+job_desc, cb_stats, seekers = load_data()
 
-# 웹 화면 구성
-st.title("🤖 맞춤형 직무 & 자격증 추천")
-st.write("궁금한 직업명이나 관심 있는 분야를 입력해 보세요!")
+# 사이드바: 충북 지역 통계 브리핑
+st.sidebar.title("📍 충북 지역 데이터 요약")
 
-# 사용자 입력창
-query = st.text_input("검색어 입력", placeholder="예: 제품 디자이너, 데이터 분석, 디자인...")
+# [분석 1] 충북 내 다수 취업 분야 (가정: 컬럼명에 '직업별'과 '취업자'가 있다고 가정)
+st.sidebar.subheader("🔥 충북 인기 직종 TOP 5")
+# 실제 파일의 컬럼명에 따라 수정이 필요할 수 있습니다.
+top_jobs = cb_stats.sort_values(by=cb_stats.columns[-1], ascending=False).head(5)
+for i, row in top_jobs.iterrows():
+    st.sidebar.write(f"- {row[0]}")
+
+# 메인 화면
+st.title("🏔️ 충청북도 맞춤형 직업/직무 추천 서비스")
+
+# [분석 2] 충북 구직자 선호 직종
+st.subheader("💡 충북 지역 구직자들은 이런 직종을 희망해요")
+cb_seekers = seekers[seekers['희망근무지역'].str.contains('충북|충청북도', na=False)]
+if not cb_seekers.empty:
+    pref_jobs = cb_seekers['희망직종'].value_counts().head(5)
+    cols = st.columns(5)
+    for idx, (job, count) in enumerate(pref_jobs.items()):
+        cols[idx].metric(label=f"TOP {idx+1}", value=job, delta=f"{count}명 희망")
+
+st.divider()
+
+# 기존 검색 기능
+st.subheader("🔍 직무 기술 및 자격증 상세 검색")
+query = st.text_input("직업명이나 관심 분야를 입력하세요", placeholder="예: 요양보호사, 사무원, 사회복지...")
 
 if query:
-    # 데이터 검색
-    result = df[df['직종'].str.contains(query, na=False) | 
-                df['표준직무전공내용'].str.contains(query, na=False)]
-
+    result = job_desc[job_desc['직종'].str.contains(query, na=False)]
     if not result.empty:
-        st.success(f"'{query}'와(과) 관련된 결과를 {len(result)}건 찾았습니다.")
-        
-        # 결과를 카드 형식으로 출력
         for i in range(len(result)):
-            with st.expander(f"📌 추천 직종: {result.iloc[i]['직종']}"):
-                st.subheader("🛠 필요 직무 기술")
-                st.write(result.iloc[i]['표준직무능력내용'])
-                
-                st.subheader("📜 추천 자격증")
-                st.info(result.iloc[i]['표준직무자격증내용'])
-                
-                st.caption(f"전공 분야: {result.iloc[i]['표준직무전공내용']}")
+            with st.expander(f"📌 {result.iloc[i]['직종']} (상세 정보)"):
+                st.write(f"**🛠 필요 기술:** {result.iloc[i]['표준직무능력내용']}")
+                st.info(f"**📜 추천 자격증:** {result.iloc[i]['표준직무자격증내용']}")
     else:
-        st.error("아쉽게도 관련 정보를 찾지 못했습니다. 다른 키워드로 검색해 보세요.")
+        st.warning("관련 정보를 찾지 못했습니다.")
